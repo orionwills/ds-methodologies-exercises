@@ -48,3 +48,13 @@ def prep_titanic(df):
     return df.pipe(handle_missing_values)\
         .pipe(drop_t_columns)\
         .pipe(encode_embarked)
+
+def prep_telco_data(df):
+    df['total_charges'] = df['total_charges'].convert_objects(convert_numeric=True)
+    for col in df.drop(columns=(['customer_id', 'total_charges', 'monthly_charges'])):
+        print('encoding ' + col)
+        encoder = LabelEncoder()
+        encoder.fit(df[col])
+        new_col = col + '_e'
+        df[new_col] = encoder.transform(df[col])
+    return df
