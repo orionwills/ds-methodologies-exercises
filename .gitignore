@@ -3,3 +3,5 @@ env.py
 __pycache__
 *.csv
 *ipynb_checkpoints*
+.ipynb_checkpoints
+__pycache__/
