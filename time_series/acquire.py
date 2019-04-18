@@ -12,7 +12,7 @@ def get_response(url):
 def merge_dfs(df1, df2, how, left, right):
     return pd.merge(df1, df2, how=how, left_on=left, right_on=right)
 
-def clean_up_columns():
+def clean_up_columns(df):
     return df.drop(columns=(['store', 'item']))
 
 def get_any(resource):
@@ -33,7 +33,7 @@ def get_any(resource):
                 break
             r = requests.get(base_url + data['payload']['next_page'])
             data = r.json()
-    df.to_csv(resource + '.csv')
+    df.to_csv(resource + '.csv', index=False)
     return df.reset_index(drop=True)
 
 def get_sales(csv):
@@ -51,7 +51,7 @@ def get_sales(csv):
             break
         r = requests.get(base_url + data['payload']['next_page'])
         data = r.json()
-    df.to_csv(csv)
+    df.to_csv(csv, index=False)
     return df.reset_index(drop=True)
 
 def get_stores(csv):
@@ -61,7 +61,7 @@ def get_stores(csv):
     r = requests.get('https://python.zach.lol/api/v1/stores')
     data = r.json()
     df = pd.concat([df, pd.DataFrame(data['payload']['stores'])])
-    df.to_csv(csv)
+    df.to_csv(csv, index=False)
     return df.reset_index(drop=True)
 
 def get_items(csv):
@@ -79,5 +79,5 @@ def get_items(csv):
             break
         r = requests.get(base_url + data['payload']['next_page'])
         data = r.json()
-    df.to_csv(csv)
+    df.to_csv(csv, index=False)
     return df.reset_index(drop=True)
