@@ -1,83 +1,82 @@
-import pandas as pd
-import requests
+import os
 import json
+from datetime import datetime
+from requests import get
+import pandas as pd
 
-'''
-Miscelaneous functions for dealing with Zach's homebrew data
-'''
+RESPONSE_DIR = './responses'
+BASE_URL = 'https://python.zach.lol'
 
-def get_response(url):
-    return requests.get(url)
+def fetch_all_sales():
+    next_page = '/api/v1/sales'
+    while next_page is not None:
+        response = get(BASE_URL + next_page).json()
+        fp = open(RESPONSE_DIR + '/sales-{}.json'.format(response['payload']['page']), 'w')
+        json.dump(response['payload']['sales'], fp)
+        print('\r{} of {}'.format(response['payload']['page'], response['payload']['max_page']), end='')
+        next_page = response['payload']['next_page']
 
-def merge_dfs(df1, df2, how, left, right):
-    return pd.merge(df1, df2, how=how, left_on=left, right_on=right)
+def concatenate_sales_responses(save_csv=True):
+    sales = []
+    for json_file in os.listdir(RESPONSE_DIR):
+        sales += json.load(open(RESPONSE_DIR + '/' + json_file))
+    df = pd.DataFrame(sales)
 
-def clean_up_columns(df):
-    return df.drop(columns=(['store', 'item']))
+    if save_csv:
+        print(f'[{datetime.now()}] Writing csv')
+        df.to_csv('sales.csv', index=False)
+    return df
 
-def get_any(resource):
-    base_url = 'https://python.zach.lol'
-    df = pd.DataFrame()
-    url = 'https://python.zach.lol/api/v1/' + resource
-    r = requests.get('https://python.zach.lol/api/v1/' + resource)
-    data = r.json()
-    if data['payload']['max_page'] == 1:
-        df = pd.concat([df, pd.DataFrame(data['payload'][resource])])
-    else:
-        df = pd.concat([df, pd.DataFrame(data['payload'][resource])])
-        r = requests.get(base_url + data['payload']['next_page'])
-        data = r.json()
-        while data['payload']['page'] <= data['payload']['max_page']:
-            df = pd.concat([df, pd.DataFrame(data['payload'][resource])])
-            if data['payload']['page'] == data['payload']['max_page']:
-                break
-            r = requests.get(base_url + data['payload']['next_page'])
-            data = r.json()
-    df.to_csv(resource + '.csv', index=False)
-    return df.reset_index(drop=True)
+def get_sales_data():
+    if os.path.exists('sales.csv'):
+        print('Reading sales from local csv')
+        return pd.read_csv('sales.csv')
 
-def get_sales(csv):
-    base_url = 'https://python.zach.lol'
-    df = pd.DataFrame()
-    url = 'https://python.zach.lol/api/v1/sales'
-    r = requests.get('https://python.zach.lol/api/v1/sales')
-    data = r.json()
-    df = pd.concat([df, pd.DataFrame(data['payload']['sales'])])
-    r = requests.get(base_url + data['payload']['next_page'])
-    data = r.json()
-    while data['payload']['page'] <= data['payload']['max_page']:
-        df = pd.concat([df, pd.DataFrame(data['payload']['sales'])])
-        if data['payload']['page'] == data['payload']['max_page']:
-            break
-        r = requests.get(base_url + data['payload']['next_page'])
-        data = r.json()
-    df.to_csv(csv, index=False)
-    return df.reset_index(drop=True)
+    print('Fetching sales from api')
+    if not os.path.exists(RESPONSE_DIR):
+        os.mkdir(RESPONSE_DIR)
+    fetch_all_sales()
+    return concatenate_sales_responses(save_csv=True)
 
-def get_stores(csv):
-    base_url = 'https://python.zach.lol'
-    df = pd.DataFrame()
-    url = 'https://python.zach.lol/api/v1/stores'
-    r = requests.get('https://python.zach.lol/api/v1/stores')
-    data = r.json()
-    df = pd.concat([df, pd.DataFrame(data['payload']['stores'])])
-    df.to_csv(csv, index=False)
-    return df.reset_index(drop=True)
+def get_items_data():
+    if os.path.exists('items.csv'):
+        print('Reading items from local csv')
+        return pd.read_csv('items.csv')
 
-def get_items(csv):
-    base_url = 'https://python.zach.lol'
-    df = pd.DataFrame()
-    url = 'https://python.zach.lol/api/v1/items'
-    r = requests.get('https://python.zach.lol/api/v1/items')
-    data = r.json()
-    df = pd.concat([df, pd.DataFrame(data['payload']['items'])])
-    r = requests.get(base_url + data['payload']['next_page'])
-    data = r.json()
-    while data['payload']['page'] <= data['payload']['max_page']:
-        df = pd.concat([df, pd.DataFrame(data['payload']['items'])])
-        if data['payload']['page'] == data['payload']['max_page']:
-            break
-        r = requests.get(base_url + data['payload']['next_page'])
-        data = r.json()
-    df.to_csv(csv, index=False)
-    return df.reset_index(drop=True)
+    print('Fetching items from api')
+    items = []
+    next_page = '/api/v1/items'
+
+    while next_page is not None:
+        response = get(BASE_URL + next_page).json()
+        print('item page #%s' % response['payload']['page'])
+        items += response['payload']['items']
+        next_page = response['payload']['next_page']
+    df = pd.DataFrame(items)
+    df.to_csv('items.csv', index=False)
+    return df
+
+def get_stores_data():
+    if os.path.exists('stores.csv'):
+        print('Reading stores from local csv')
+        return pd.read_csv('stores.csv')
+
+    print('Fetching store data from api')
+    response = get(BASE_URL + '/api/v1/stores').json()
+    df = pd.DataFrame(response['payload']['stores'])
+    df.to_csv('stores.csv', index=False)
+    return df
+
+def get_all_data():
+    sales = get_sales_data()
+    stores = get_stores_data()
+    items = get_items_data()
+
+    sales.rename(columns={'store': 'store_id', 'item': 'item_id'}, inplace=True)
+    df = pd.merge(sales, items, on='item_id')
+    df = pd.merge(df, stores, on='store_id')
+
+    return df
+
+if __name__ == '__main__':
+    df = get_all_data()

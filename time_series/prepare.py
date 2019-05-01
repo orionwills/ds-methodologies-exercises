@@ -1,39 +1,38 @@
 import pandas as pd
 
-def convert_to_datetime(df):
-    datetime_format = '%a, %d %b %Y %H:%M%S %Z'
-    return pd.to_datetime(df, format=datetime_format, utc=True)
-
-def set_date_index(df):
-    return df.set_index(df)
-
-def change_to_UTC(series, new_tz):
-    return series.tz_localize('utc').tz_convert(new_tz)
-
-def split_date(df):
-    df['year'] = df.dt.year
-    df['quarter'] = df.dt.quarter
-    df['month'] = df.dt.month
-    df['day'] = df.dt.day
-    df['day_of_week'] = df.dt.day_name().str[:3]
-    # df['weekday_or_weekend'] = ((pd.DatetimeIndex(df).dayofweek) < 5).astype(float)
-    df['is_weekend'] = (df.weekday.str.startswith('S')).astype(int)
+def parse_sales_date(df):
+#     datetime_format = '%a, %d %b %Y %H:%M:%S %Z'
+    datetime_format = '%a, %d %b %Y'
+    df.sale_date = pd.to_datetime(df.sale_date, format=datetime_format, utc=True)
     return df
 
-def sale_total(df):
+def set_date_index(df):
+    return df.set_index('sale_date')
+
+def add_date_parts(df):
+    # year, quarter, month, day of month, day of week, weekend vs. weekday
+    df['year'] = df.sale_date.dt.year
+    df['quarter'] = df.sale_date.dt.quarter
+    df['month'] = df.sale_date.dt.month
+    df['day'] = df.sale_date.dt.day
+    df['weekday'] = df.sale_date.dt.day_name().str[:3]
+    df['is_weekend'] = df.weekday.str.startswith('S')
+    return df
+
+def improve_sales_data(df):
     df['sale_total'] = df.sale_amount * df.item_price
     return df.rename(columns={'sale_amount': 'quantity'})
 
-def agg_by_weekday(df):
-    return df.groupby('weekday')[['sales_total', 'quantity']].agg(['median', 'sum'])
-
-def sale_diff(df):
+def add_sales_difference(df):
     df['diff_from_last_day'] = df.sale_total.diff()
     return df
 
+def aggregate_by_weekday(df):
+    return df.groupby('weekday')[['sale_total', 'quantity']].agg(['median', 'sum'])
+
 def prep_store_data(df):
-    df = convert_to_datetime(df)
-    split_date(df)
-    sale_total(df)
-    sale_diff(df)
+    df = parse_sales_date(df)
+    df = add_date_parts(df)
+    df = improve_sales_data(df)
+    df = add_sales_difference(df)
     return df

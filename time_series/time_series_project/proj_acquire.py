@@ -1,16 +1,5 @@
 import pandas as pd
 
-
-###################
-##
-## All of this functions are coming from a file that has been imported like so:
-##
-## ##### file = open('csv-path-here').readlins()
-## ##### for index,line in enumerate(file):
-##  ##### file[index] = line.replace('\n','')
-##
-###################
-
 def grab_foods(file):
     foods = []
     for line in file:
