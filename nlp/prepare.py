@@ -25,7 +25,7 @@ def normalize_text(text):
     .decode('utf-8', 'ignore')
 # Remove special characters
 def remove_special(text):
-    return re.sub(r'[^\w\s]', ' ', text)
+    return re.sub(r"[^a-z0-9'\s]", '', text)
 
 # NLP Stuff
 # Tokenize and return dictionary
