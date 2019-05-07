@@ -20,7 +20,7 @@ def lowercase_text(text):
     return text.lower()
 # Normalize, encode, and decode
 def normalize_text(text):
-    return unicodedata.normalize('NFKD', article)\
+    return unicodedata.normalize('NFKD', text)\
     .encode('ascii', 'ignore')\
     .decode('utf-8', 'ignore')
 # Remove special characters
